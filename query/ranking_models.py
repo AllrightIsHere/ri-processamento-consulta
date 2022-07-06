@@ -135,7 +135,7 @@ class VectorRankingModel(RankingModel):
                 documents_weight[doc_id] += wiq * VectorRankingModel.tf_idf(
                     self.idx_pre_comp_vals.doc_count, occur.term_freq, num_docs_with_term)
 
-        print(documents_norm)
+        # print(documents_norm)
         for doc in documents_weight.keys():
             documents_weight[doc] = documents_weight[doc] / \
                 documents_norm[str(doc)]

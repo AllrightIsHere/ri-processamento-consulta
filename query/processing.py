@@ -76,6 +76,8 @@ class QueryRunner:
                     dic_word_count[term] = 0
                 dic_word_count[term] += 1
 
+        # print("1", dic_word_count)
+
         for term, count in dic_word_count.items():
             if self.index.get_occurrence_list(term):
                 map_term_occur[term] = TermOccurrence(
@@ -91,7 +93,13 @@ class QueryRunner:
 
         dic_terms = {}
 
-        for term in terms:
+        plain_text = self.cleaner.preprocess_text(" ".join(terms))
+
+        tokens = word_tokenize(plain_text, language="portuguese")
+
+        for term in tokens:
+            term = self.cleaner.preprocess_word(term)
+            # print("4", term)
             dic_terms[term] = self.index.get_occurrence_list(term)
 
         return dic_terms
@@ -108,6 +116,8 @@ class QueryRunner:
         dic_occur_per_term_query = self.get_occurrence_list_per_term(
             query.split(" "))
 
+        # print("2", dic_query_occur)
+        # print("3", dic_occur_per_term_query)
         # utilize o ranking_model para retornar o documentos ordenados considrando dic_query_occur e dic_occur_per_term_query
         return self.ranking_model.get_ordered_docs(query=dic_query_occur, docs_occur_per_term=dic_occur_per_term_query)
 
