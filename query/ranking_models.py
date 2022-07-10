@@ -138,7 +138,7 @@ class VectorRankingModel(RankingModel):
         # print(documents_norm)
         for doc in documents_weight.keys():
             documents_weight[doc] = documents_weight[doc] / \
-                documents_norm[str(doc)]
+                documents_norm[doc]
 
         # retona a lista de doc ids ordenados de acordo com o TF IDF
         return self.rank_document_ids(documents_weight), documents_weight

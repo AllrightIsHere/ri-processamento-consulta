@@ -163,6 +163,19 @@ class ProcessingTest(unittest.TestCase):
             self.assertListEqual(
                 resposta, arr_expected_response[i], f"A resposta a consulta '{query}' deveria ser {arr_expected_response[i]} e não {resposta}")
 
+    def test_get_relevance_per_query(self):
+        relevance_per_query = self.queryRunner.get_relevance_per_query()
+        # print(relevance_per_query)
+
+        expected_len = {
+            "belo_horizonte": 27,
+            "irlanda": 39,
+            "sao_paulo": 605}
+        for query in relevance_per_query.keys():
+            resposta = len(relevance_per_query[query])
+            self.assertEqual(
+                resposta, expected_len[query],  f"A quantidade de documentos relevantes para '{query}' deveria ser {expected_len[query]} e não {resposta}")
+
 
 if __name__ == "__main__":
     unittest.main()

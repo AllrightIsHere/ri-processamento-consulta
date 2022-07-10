@@ -23,7 +23,7 @@ class QueryRunner:
         for arquiv in ["belo_horizonte", "irlanda", "sao_paulo"]:
             with open(f"relevant_docs/{arquiv}.dat") as arq:
                 dic_relevance_docs[arquiv] = set(arq.readline().split(","))
-                print(dic_relevance_docs)
+                # print(dic_relevance_docs)
         return dic_relevance_docs
 
     def count_topn_relevant(self, n: int, respostas: List[int], doc_relevantes: Set[int]) -> int:
@@ -131,15 +131,18 @@ class QueryRunner:
                 para esta consulta.
         """
         time_checker = CheckTime()
-        
+
         # PEça para usuario selecionar entre Booleano ou modelo vetorial para intanciar o QueryRunner
         # apropriadamente. NO caso do booleano, vc deve pedir ao usuario se será um "and" ou "or" entre os termos.
         # abaixo, existem exemplos fixos.
-        model_select = int(input('Qual modelo vc deseja?\n(1) Booleano\n(2)Vetorial\n Sua resposta: '))
+        model_select = int(
+            input('Qual modelo vc deseja?\n(1) Booleano\n(2)Vetorial\n Sua resposta: '))
         bool_selected = 1
         if model_select == 1:
-            bool_selected = int(input('Qual operação booleana?\n(1) AND\n(2) OR\nSua resposta: '))
-        ranking_model = VectorRankingModel(indice_pre_computado) if model_select == 2 else BooleanRankingModel(bool_selected)
+            bool_selected = int(
+                input('Qual operação booleana?\n(1) AND\n(2) OR\nSua resposta: '))
+        ranking_model = VectorRankingModel(
+            indice_pre_computado) if model_select == 2 else BooleanRankingModel(bool_selected)
         qr = QueryRunner(indice, ranking_model)
         time_checker.print_delta("Query Creation")
 
@@ -156,11 +159,15 @@ class QueryRunner:
             revocacao = 0
             precisao = 0
             for n in arr_top:
-                precisao, revocacao = QueryRunner.compute_precision_recall(n, resposta, doc_relevantes)
+                precisao, revocacao = QueryRunner.compute_precision_recall(
+                    n, resposta, doc_relevantes)
                 print(f"Precisao @{n}: {precisao}")
                 print(f"Recall @{n}: {revocacao}")
 
         # imprima aas top 10 respostas
+        top_respostas = resposta[:10]
+        for i in range(top_respostas):
+            print(f"{i+1}: {top_respostas[i]}")
 
     @staticmethod
     def main():
