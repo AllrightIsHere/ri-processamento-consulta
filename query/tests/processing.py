@@ -168,7 +168,7 @@ class ProcessingTest(unittest.TestCase):
         # print(relevance_per_query)
 
         expected_len = {
-            "belo_horizonte": 27,
+            "belo_horizonte": 26,
             "irlanda": 39,
             "sao_paulo": 605}
         for query in relevance_per_query.keys():

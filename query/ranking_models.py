@@ -3,7 +3,8 @@ from abc import abstractmethod
 from typing import List, Set, Mapping
 from index.structure import TermOccurrence
 import math
-from enum import Enum
+from enum import IntEnum
+from tqdm import tqdm
 
 
 class IndexPreComputedVals():
@@ -22,7 +23,7 @@ class IndexPreComputedVals():
         vocab = self.index.vocabulary
         doc_count = len(self.index.set_documents)
 
-        for term in vocab:
+        for term in tqdm(vocab):
             occur_list = self.index.get_occurrence_list(term)
             num_docs_with_term = len(occur_list)
             for occur in occur_list:
@@ -32,7 +33,7 @@ class IndexPreComputedVals():
                 self.document_norm[doc_id] += pow(VectorRankingModel.tf_idf(
                     doc_count, occur.term_freq, num_docs_with_term), 2)
 
-        for doc in self.document_norm.keys():
+        for doc in tqdm(self.document_norm.keys()):
             self.document_norm[doc] = math.sqrt(self.document_norm[doc])
 
         self.doc_count = self.index.document_count
@@ -51,7 +52,7 @@ class RankingModel():
         return doc_ids
 
 
-class OPERATOR(Enum):
+class OPERATOR(IntEnum):
     AND = 1
     OR = 2
 
@@ -71,7 +72,6 @@ class BooleanRankingModel(RankingModel):
                 set_ids = set_ids.intersection(doc_list)
             else:
                 set_ids.update(doc_list)
-
         return set_ids
 
     def union_all(self, map_lst_occurrences: Mapping[str, List[TermOccurrence]]) -> List[int]:
@@ -83,12 +83,12 @@ class BooleanRankingModel(RankingModel):
         return set_ids
 
     def get_ordered_docs(self, query: Mapping[str, TermOccurrence],
-                         map_lst_occurrences: Mapping[str, List[TermOccurrence]]) -> (List[int], Mapping[int, float]):
-        """Considere que map_lst_occurrences possui as ocorrencias apenas dos termos que existem na consulta"""
+                         docs_occur_per_term: Mapping[str, List[TermOccurrence]]) -> (List[int], Mapping[int, float]):
+        """Considere que docs_occur_per_term possui as ocorrencias apenas dos termos que existem na consulta"""
         if self.operator == OPERATOR.AND:
-            return self.intersection_all(map_lst_occurrences), None
+            return self.intersection_all(docs_occur_per_term), None
         else:
-            return self.union_all(map_lst_occurrences), None
+            return self.union_all(docs_occur_per_term), None
 
 # Atividade 2
 
@@ -113,7 +113,7 @@ class VectorRankingModel(RankingModel):
     def tf_idf(doc_count: int, freq_term: int, num_docs_with_term) -> float:
         tf = VectorRankingModel.tf(freq_term)
         idf = VectorRankingModel.idf(doc_count, num_docs_with_term)
-        #print(f"TF:{tf} IDF:{idf} n_i: {num_docs_with_term} N: {doc_count}")
+        # print(f"TF:{tf} IDF:{idf} n_i: {num_docs_with_term} N: {doc_count}")
         return tf*idf
 
     def get_ordered_docs(self, query: Mapping[str, TermOccurrence],
@@ -138,7 +138,7 @@ class VectorRankingModel(RankingModel):
         # print(documents_norm)
         for doc in documents_weight.keys():
             documents_weight[doc] = documents_weight[doc] / \
-                documents_norm[doc]
+                documents_norm[str(doc)]
 
         # retona a lista de doc ids ordenados de acordo com o TF IDF
         return self.rank_document_ids(documents_weight), documents_weight

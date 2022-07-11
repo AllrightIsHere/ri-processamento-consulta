@@ -1,10 +1,15 @@
+from copyreg import pickle
 from typing import List, Set, Mapping
 from nltk.tokenize import word_tokenize
 from numpy import append
+from sqlalchemy import true
 from util.time import CheckTime
 from query.ranking_models import RankingModel, BooleanRankingModel, VectorRankingModel, IndexPreComputedVals
 from index.structure import Index, TermOccurrence
-from index.indexer import Cleaner
+from index.indexer import Cleaner, HTMLIndexer
+import datetime
+import os
+import pickle
 
 
 class QueryRunner:
@@ -13,7 +18,8 @@ class QueryRunner:
         self.index = index
         self.cleaner = cleaner
 
-    def get_relevance_per_query(self) -> Mapping[str, Set[int]]:
+    @staticmethod
+    def get_relevance_per_query() -> Mapping[str, Set[int]]:
         """
         Adiciona a lista de documentos relevantes para um determinada query (os documentos relevantes foram
         fornecidos no ".dat" correspondente. Por ex, belo_horizonte.dat possui os documentos relevantes da consulta "Belo Horizonte"
@@ -22,7 +28,8 @@ class QueryRunner:
         dic_relevance_docs = {}
         for arquiv in ["belo_horizonte", "irlanda", "sao_paulo"]:
             with open(f"relevant_docs/{arquiv}.dat") as arq:
-                dic_relevance_docs[arquiv] = set(arq.readline().split(","))
+                arr = [int(s) for s in arq.readline().split(",")]
+                dic_relevance_docs[arquiv] = set(arr)
                 # print(dic_relevance_docs)
         return dic_relevance_docs
 
@@ -136,43 +143,58 @@ class QueryRunner:
         # apropriadamente. NO caso do booleano, vc deve pedir ao usuario se será um "and" ou "or" entre os termos.
         # abaixo, existem exemplos fixos.
         model_select = int(
-            input('Qual modelo vc deseja?\n(1) Booleano\n(2)Vetorial\n Sua resposta: '))
+            input('Qual modelo vc deseja?\n (1) Booleano\n (2) Vetorial\n  Sua resposta: '))
         bool_selected = 1
         if model_select == 1:
             bool_selected = int(
-                input('Qual operação booleana?\n(1) AND\n(2) OR\nSua resposta: '))
+                input('Qual operação booleana?\n (1) AND\n (2) OR\n  Sua resposta: '))
+
         ranking_model = VectorRankingModel(
             indice_pre_computado) if model_select == 2 else BooleanRankingModel(bool_selected)
-        qr = QueryRunner(indice, ranking_model)
+
+        cleaner = Cleaner(stop_words_file="stopwords.txt",
+                          language="portuguese",
+                          perform_stop_words_removal=True,
+                          perform_accents_removal=True,
+                          perform_stemming=False)
+
+        qr = QueryRunner(
+            index=indice, ranking_model=ranking_model, cleaner=cleaner)
         time_checker.print_delta("Query Creation")
 
         # Utilize o método get_docs_term para obter a lista de documentos que responde esta consulta
+
         resposta = qr.get_docs_term(query)
-        time_checker.print_delta("anwered with {len(respostas)} docs")
+        resposta = resposta[0]
+        if model_select == 1:
+            resposta = list(resposta)
+        time_checker.print_delta(f"anwered with {len(resposta)} docs")
 
         # nesse if, vc irá verificar se o termo possui documentos relevantes associados a ele
         # se possuir, vc deverá calcular a Precisao e revocação nos top 5, 10, 20, 50.
         # O for que fiz abaixo é só uma sugestao e o metododo countTopNRelevants podera auxiliar no calculo da revocacao e precisao
-        if any(resposta in map_relevantes):
-            doc_relevantes = map_relevantes[query]
-            arr_top = [5, 10, 20, 50]
-            revocacao = 0
-            precisao = 0
-            for n in arr_top:
-                precisao, revocacao = QueryRunner.compute_precision_recall(
-                    n, resposta, doc_relevantes)
-                print(f"Precisao @{n}: {precisao}")
-                print(f"Recall @{n}: {revocacao}")
+        if query in map_relevantes.keys():
+            relevants_list = list(map_relevantes[query])
+            if any(relevant_doc in resposta for relevant_doc in relevants_list):
+                doc_relevantes = map_relevantes[query]
+                arr_top = [5, 10, 20, 50]
+                revocacao = 0
+                precisao = 0
+                for n in arr_top:
+                    precisao, revocacao = qr.compute_precision_recall(
+                        n, resposta, doc_relevantes)
+                    print(f"Precisao @{n}: {precisao}")
+                    print(f"Recall @{n}: {revocacao}")
 
         # imprima aas top 10 respostas
         top_respostas = resposta[:10]
-        for i in range(top_respostas):
+        for i in range(len(top_respostas)):
             print(f"{i+1}: {top_respostas[i]}")
 
     @staticmethod
     def main():
         # leia o indice (base da dados fornecida)
-        index: Index = None
+        index: Index = Index.read("wiki.idx")
 
         # Checagem se existe um documento (apenas para teste, deveria existir)
         print(f"Existe o doc? index.hasDocId(105047)")
@@ -180,13 +202,31 @@ class QueryRunner:
         # Instancie o IndicePreCompModelo para pr ecomputar os valores necessarios para a query
         print("Precomputando valores atraves do indice...")
         check_time = CheckTime()
-        index_pre_compute = IndexPreComputedVals(index)
+        if os.path.exists('pre_compute.idx'):
+            with open('pre_compute.idx', 'rb') as f:
+                index_pre_compute = pickle.load(f)
+        else:
+            index_pre_compute = IndexPreComputedVals(index)
+            with open('pre_compute.idx', 'wb') as f:
+                pickle.dump(index_pre_compute, f)
         check_time.print_delta("Precomputou valores")
 
         # encontra os docs relevantes
         map_relevance = QueryRunner.get_relevance_per_query()
 
-        print("Fazendo query...")
-        # aquui, peça para o usuário uma query (voce pode deixar isso num while ou fazer um interface grafica se estiver bastante animado ;)
+        # aquui, peça para o usuário uma query (voce pode deixar isso num while ou fazer uma interface grafica se estiver bastante animado ;)
         query = "São Paulo"
-        QueryRunner.runQuery(query, index, index_pre_compute, map_relevance)
+        while true:
+            print("===========================================")
+            opcao = int(
+                input('Voce deseja fazer uma consulta?\n (1) SIM\n (2) NAO\n  Sua resposta: '))
+            if(opcao == 1):
+                query = input('  Digite a query: ')
+                print(f"Fazendo query de '{query}'...")
+                QueryRunner.runQuery(
+                    query, index, index_pre_compute, map_relevance)
+                print("===========================================")
+            else:
+                print("Finalizando consultas. :)")
+                print("===========================================")
+                break
