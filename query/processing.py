@@ -116,6 +116,9 @@ class QueryRunner:
                 A partir do indice, retorna a lista de ids de documentos desta consulta
                 usando o modelo especificado pelo atributo ranking_model
         """
+
+        query = query.replace("_", " ")
+
         # Obtenha, para cada termo da consulta, sua ocorrencia por meio do método get_query_term_occurence
         dic_query_occur = self.get_query_term_occurence(query)
 
@@ -142,6 +145,16 @@ class QueryRunner:
         # PEça para usuario selecionar entre Booleano ou modelo vetorial para intanciar o QueryRunner
         # apropriadamente. NO caso do booleano, vc deve pedir ao usuario se será um "and" ou "or" entre os termos.
         # abaixo, existem exemplos fixos.
+        cleaner = Cleaner(stop_words_file="stopwords.txt",
+                          language="portuguese",
+                          perform_stop_words_removal=True,
+                          perform_accents_removal=True,
+                          perform_stemming=False)
+
+        query = cleaner.preprocess_text(query)
+
+        query = "_".join(query.split(" "))
+
         model_select = int(
             input('Qual modelo vc deseja?\n (1) Booleano\n (2) Vetorial\n  Sua resposta: '))
         bool_selected = 1
@@ -152,11 +165,6 @@ class QueryRunner:
         ranking_model = VectorRankingModel(
             indice_pre_computado) if model_select == 2 else BooleanRankingModel(bool_selected)
 
-        cleaner = Cleaner(stop_words_file="stopwords.txt",
-                          language="portuguese",
-                          perform_stop_words_removal=True,
-                          perform_accents_removal=True,
-                          perform_stemming=False)
 
         qr = QueryRunner(
             index=indice, ranking_model=ranking_model, cleaner=cleaner)
@@ -165,6 +173,7 @@ class QueryRunner:
         # Utilize o método get_docs_term para obter a lista de documentos que responde esta consulta
 
         resposta = qr.get_docs_term(query)
+        # print(resposta)
         resposta = resposta[0]
         if model_select == 1:
             resposta = list(resposta)
@@ -173,7 +182,10 @@ class QueryRunner:
         # nesse if, vc irá verificar se o termo possui documentos relevantes associados a ele
         # se possuir, vc deverá calcular a Precisao e revocação nos top 5, 10, 20, 50.
         # O for que fiz abaixo é só uma sugestao e o metododo countTopNRelevants podera auxiliar no calculo da revocacao e precisao
-        if query in map_relevantes.keys():
+        # print(map_relevantes)
+        # map_relevantes['belo horizonte'] = map_relevantes.pop('belo_horizonte')
+        # map_relevantes['sao paulo'] = map_relevantes.pop('sao_paulo')
+        if query in map_relevantes:
             relevants_list = list(map_relevantes[query])
             if any(relevant_doc in resposta for relevant_doc in relevants_list):
                 doc_relevantes = map_relevantes[query]
