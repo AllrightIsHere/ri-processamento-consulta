@@ -5,12 +5,63 @@ from index.structure import TermOccurrence
 import math
 from enum import IntEnum
 from tqdm import tqdm
+import matplotlib.pyplot as plt
 
 
 class IndexPreComputedVals():
-    def __init__(self, index):
+    def __init__(self, index, skip_precompute=False):
         self.index = index
-        self.precompute_vals()
+        if not skip_precompute:
+            self.precompute_vals()
+
+    @staticmethod
+    def plot_terms_freq():
+        x = [i for i in range(len(IndexPreComputedVals.term_freq_list))]
+        y = [freq for freq, _ in IndexPreComputedVals.term_freq_list]
+
+        _, ax = plt.subplots()
+
+        ax.scatter(x, y)
+        ax.set_yscale('log')
+
+        plt.show()
+
+    @staticmethod
+    def print_top_idf():
+        top10_melhores_idf = VectorRankingModel.idf_list[-10:]
+        top10_melhores_idf.reverse()
+        top10_piores_idf = VectorRankingModel.idf_list[:10]
+
+        print("Top 10 melhores idf:")
+        for i, item in enumerate(top10_melhores_idf):
+            print(f"{i+1}: {item}")
+
+        print("Top 10 piores idf:")
+        for i, item in enumerate(top10_piores_idf):
+            print(f"{i+1}: {item}")
+
+    def calcule_tops_idf(self):
+        vocab = self.index.vocabulary
+        doc_count = len(self.index.set_documents)
+
+        term_freq_list = []
+
+        for term in tqdm(vocab):
+            occur_list = self.index.get_occurrence_list(term)
+            num_docs_with_term = len(occur_list)
+            VectorRankingModel.idf_list.append((VectorRankingModel.idf(doc_count, num_docs_with_term), term))
+            term_occur_count = 0
+
+            for occur in occur_list:
+                term_occur_count+=occur.term_freq
+
+            term_freq_list.append((term_occur_count, term))
+            
+
+        VectorRankingModel.idf_list.sort()
+        term_freq_list.sort(reverse=True)
+        IndexPreComputedVals.term_freq_list = term_freq_list
+
 
     def precompute_vals(self):
         """
@@ -94,6 +145,7 @@ class BooleanRankingModel(RankingModel):
 
 
 class VectorRankingModel(RankingModel):
+    idf_list = []
 
     def __init__(self, idx_pre_comp_vals: IndexPreComputedVals):
         self.idx_pre_comp_vals = idx_pre_comp_vals

@@ -198,10 +198,18 @@ class QueryRunner:
                     print(f"Precisao @{n}: {precisao}")
                     print(f"Recall @{n}: {revocacao}")
 
-        # imprima aas top 10 respostas
+        # imprima as top 10 melhores respostas
         top_respostas = resposta[:10]
-        for i in range(len(top_respostas)):
-            print(f"{i+1}: {top_respostas[i]}")
+        print("Top 10 melhores respostas:")
+        for i, item in enumerate(top_respostas):
+            print(f"{i+1}: {item}")
+
+        # imprime as top 10 piores respostas
+        print("\n\nTop 10 piores respostas")
+        top_piores = resposta[-10:]
+        top_piores.reverse()
+        for i, item in enumerate(top_piores):
+            print(f"{i+1}: {item}")
 
     @staticmethod
     def main():
@@ -222,6 +230,9 @@ class QueryRunner:
             with open('pre_compute.idx', 'wb') as f:
                 pickle.dump(index_pre_compute, f)
         check_time.print_delta("Precomputou valores")
+
+        idf_precompute = IndexPreComputedVals(index, skip_precompute=True)
+        idf_precompute.calcule_tops_idf()
 
         # encontra os docs relevantes
         map_relevance = QueryRunner.get_relevance_per_query()
