@@ -49,19 +49,18 @@ class IndexPreComputedVals():
         for term in tqdm(vocab):
             occur_list = self.index.get_occurrence_list(term)
             num_docs_with_term = len(occur_list)
-            VectorRankingModel.idf_list.append((VectorRankingModel.idf(doc_count, num_docs_with_term), term))
+            VectorRankingModel.idf_list.append(
+                (VectorRankingModel.idf(doc_count, num_docs_with_term), term))
             term_occur_count = 0
 
             for occur in occur_list:
-                term_occur_count+=occur.term_freq
+                term_occur_count += occur.term_freq
 
             term_freq_list.append((term_occur_count, term))
-            
 
         VectorRankingModel.idf_list.sort()
         term_freq_list.sort(reverse=True)
         IndexPreComputedVals.term_freq_list = term_freq_list
-
 
     def precompute_vals(self):
         """

@@ -1,5 +1,7 @@
+from cProfile import label
 from copyreg import pickle
 from typing import List, Set, Mapping
+from matplotlib import pyplot as plt
 from nltk.tokenize import word_tokenize
 from numpy import append
 from sqlalchemy import true
@@ -56,6 +58,25 @@ class QueryRunner:
         precision = float(count_relevant / min(len(lst_docs), n))
         recall = float(count_relevant / len(relevant_docs))
         return precision, recall
+
+    def plot_precision_recall(self, query: str, arr_top: List[int], arr_precision: List[float], arr_recall: List[float]) -> None:
+        plt.plot(arr_top, arr_precision, marker=".", label="Precision")
+        plt.plot(arr_top, arr_recall, marker="x", label="Recall")
+
+        plt.title(f"Precision and Recal of query: '{query}'")
+        plt.xlabel("N docs")
+        plt.ylabel("Metric")
+        plt.legend()
+
+        plt.show()
+        plt.close()
+
+        plt.plot(arr_recall, arr_precision, marker="*", color="red")
+        plt.title(f"Precision X Recal of query: '{query}'")
+        plt.xlabel("Recall")
+        plt.ylabel("Precision")
+
+        plt.show()
 
     def get_query_term_occurence(self, query: str) -> Mapping[str, TermOccurrence]:
         """
@@ -165,7 +186,6 @@ class QueryRunner:
         ranking_model = VectorRankingModel(
             indice_pre_computado) if model_select == 2 else BooleanRankingModel(bool_selected)
 
-
         qr = QueryRunner(
             index=indice, ranking_model=ranking_model, cleaner=cleaner)
         time_checker.print_delta("Query Creation")
@@ -189,14 +209,21 @@ class QueryRunner:
             relevants_list = list(map_relevantes[query])
             if any(relevant_doc in resposta for relevant_doc in relevants_list):
                 doc_relevantes = map_relevantes[query]
-                arr_top = [5, 10, 20, 50]
+                arr_top = [5, 10, 25, 50]
                 revocacao = 0
                 precisao = 0
+                arr_precisao = []
+                arr_revocacao = []
                 for n in arr_top:
                     precisao, revocacao = qr.compute_precision_recall(
                         n, resposta, doc_relevantes)
+                    arr_precisao.append(precisao)
+                    arr_revocacao.append(revocacao)
                     print(f"Precisao @{n}: {precisao}")
                     print(f"Recall @{n}: {revocacao}")
+
+                qr.plot_precision_recall(
+                    query, arr_top, arr_precisao, arr_revocacao)
 
         # imprima as top 10 melhores respostas
         top_respostas = resposta[:10]
